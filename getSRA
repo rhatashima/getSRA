@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # getSRA version
-VERSION="0.1"
+VERSION="0.2"
 
 # default arguments
 OUTDIR="./"
@@ -93,7 +93,7 @@ mkdir -p ${OUTDIR}
 
 if [[ "${SRAID}" ]]; then
   prefetch --output-directory ${OUTDIR}/tmp ${SRAID};
-  INPUT_FILES=($(ls ${OUTDIR}/tmp/*.sra))
+  INPUT_FILES=${OUTDIR}/tmp/*.sra
 elif [[ "${ACCESSION}" ]]; then
   prefetch --output-directory ${OUTDIR}/tmp --option-file ${ACCESSION};
 elif [[ "${INPUT_FILES}" ]]; then
@@ -111,11 +111,12 @@ third2second(){
 
 compress(){
   local sra_id=${1}
-  third_file=($(ls "${OUTDIR}/tmp/${sra_id}_3.fastq"))
+  local idx=${2}
+  if [ -f ${OUTDIR}/tmp/${sra_id}_3.fastq ]; then third_file=${OUTDIR}/tmp/${sra_id}_3.fastq; fi
   if [[ "${NAME}" ]]; then
     if [[ "${third_file}" ]]; then third2second ${sra_id}; fi
-    pigz -p ${NTHREADS} -c ${OUTDIR}/tmp/${sra_id}_1.fastq > ${OUTDIR}/tmp/${NAME}${i}_1.fastq.gz; rm ${OUTDIR}/tmp/${sra_id}_1.fastq;
-    pigz -p ${NTHREADS} -c ${OUTDIR}/tmp/${sra_id}_2.fastq > ${OUTDIR}/tmp/${NAME}${i}_2.fastq.gz; rm ${OUTDIR}/tmp/${sra_id}_2.fastq;
+    pigz -p ${NTHREADS} -c ${OUTDIR}/tmp/${sra_id}_1.fastq > ${OUTDIR}/tmp/${NAME}-${idx}_1.fastq.gz; rm ${OUTDIR}/tmp/${sra_id}_1.fastq;
+    pigz -p ${NTHREADS} -c ${OUTDIR}/tmp/${sra_id}_2.fastq > ${OUTDIR}/tmp/${NAME}-${idx}_2.fastq.gz; rm ${OUTDIR}/tmp/${sra_id}_2.fastq;
   else
     if [[ "${third_file}" ]]; then third2second ${sra_id}; fi
     for fastq in ${OUTDIR}/tmp/*.fastq; do pigz -p ${NTHREADS} ${fastq}; done
@@ -123,22 +124,22 @@ compress(){
 }
 
 fastq_dump_sra(){
-  i=1
+  idx=1
   for file in ${INPUT_FILES}; do
     local sra_id=$(basename ${file} .sra)
     pfastq-dump -t ${NTHREADS} -O ${OUTDIR}/tmp/ --split-files --skip-technical --defline-qual '+' --defline-seq '@$sn[_$rn]/$ri' ${file}
-    compress ${sra_id}
-    let i++
+    compress ${sra_id} ${idx}
+    let idx++
   done
 }
 
 fastq_dump_accession(){
-  i=1
+  idx=1
   cat ${ACCESSION} | while read line || [ -n "${line}" ]; do
     local sra_id=${line}
     pfastq-dump -t ${NTHREADS} -O {OUTDIR}/tmp --split-files --skip-technical --defline-qual '+' --defline-seq '@$sn[_$rn]/$ri' ${OUTDIR}/tmp/${sra_id}.sra
-    compress ${sra_id}
-    let i++
+    compress ${sra_id} ${idx}
+    let idx++
   done
 }
 

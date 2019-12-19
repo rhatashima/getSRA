@@ -1,0 +1,154 @@
+#!/bin/sh
+
+# getSRA version
+VERSION="0.4"
+
+# default arguments
+OUTDIR="./"
+NTHREADS=16
+
+# functions for version and help
+print_version(){
+  echo "getSRA version $VERSION"
+}
+
+print_help(){
+  cat <<EOS
+Usage:
+getSRA.sh -t <number of threads> -s <sra id> -n <sample name>
+
+pfastq-dump option:
+-t|--threads         number of threads [default: 16]
+-s|--sra-id          SRA id
+-a|--accession-list  Accession list
+-o|--outdir          output directory [default: cwd]
+-n|--name            sample name
+
+Extra arguments will be passed through
+
+Other:
+-v|--version         show version info
+-h|--help            program usage
+EOS
+}
+
+# parse arguments
+while [[ $# -gt 0 ]]; do
+  key=${1}
+  case ${key} in
+    -v|--version)
+      print_version
+      exit 0
+      ;;
+    -h|--help)
+      print_help
+      exit 0
+      ;;
+    -t|--threads)
+      NTHREADS=${2}
+      shift
+      ;;
+    -s|--sra-id)
+      SRAID=${2}
+      shift
+      ;;
+    -o|--outdir)
+      OUTDIR="${2}"
+      shift
+      ;;
+    -a|--accession-list)
+      ACCESSION=${2}
+      shift
+      ;;
+    -n|--name)
+      NAME=${2}
+      shift
+      ;;
+    -Z|--stdout)
+      STDOUT="true"
+      ;;
+    -*|--*)
+      OPTIONS="${OPTIONS} ${1}"
+      # OPTIONS="${OPTIONS} ${1} ${2}"
+      ;;
+    *sra)
+      INPUT_FILES="${INPUT_FILES} ${1}"
+      ;;
+    *)
+      OPTIONS="${OPTIONS} ${1}"
+  esac
+  shift
+done
+
+# if ! [[ "${NAME}" ]]; then echo "ERROR: No Sample Name"; exit 1; fi
+# if ! [[ "${SRAID}" ]]; then echo "ERROR: No SRA ID"; exit 1; fi
+
+if [[ ${OUTDIR} == */ ]]; then
+  OUTDIR="${OUTDIR%*/}"
+else
+  :
+fi
+
+mkdir -p ${OUTDIR}
+
+if [[ "${SRAID}" ]]; then
+  prefetch --output-directory ${OUTDIR}/tmp ${SRAID};
+  INPUT_FILES=($(ls ${OUTDIR}/tmp/*.sra))
+elif [[ "${ACCESSION}" ]]; then
+  prefetch --output-directory ${OUTDIR}/tmp --option-file ${ACCESSION};
+elif [[ "${INPUT_FILES}" ]]; then
+  :
+else
+  echo "ERROR: No SRA ID."
+  exit 1
+fi
+
+third2second(){
+  local sra_id=${1}
+  cat ${OUTDIR}/tmp/${sra_id}_3.fastq | sed -e 's/reverse\/3/reverse\/2/g' > ${OUTDIR}/tmp/${sra_id}_2.fastq
+  rm ${OUTDIR}/tmp/${sra_id}_3.fastq
+}
+
+compress(){
+  local sra_id=${1}
+  third_file=($(ls "${OUTDIR}/tmp/${sra_id}_3.fastq"))
+  if [[ "${NAME}" ]]; then
+    if [[ "${third_file}" ]]; then third2second ${sra_id}; fi
+    pigz -p ${NTHREADS} -c ${OUTDIR}/tmp/${sra_id}_1.fastq > ${OUTDIR}/tmp/${NAME}${i}_1.fastq.gz; rm ${OUTDIR}/tmp/${sra_id}_1.fastq;
+    pigz -p ${NTHREADS} -c ${OUTDIR}/tmp/${sra_id}_2.fastq > ${OUTDIR}/tmp/${NAME}${i}_2.fastq.gz; rm ${OUTDIR}/tmp/${sra_id}_2.fastq;
+  else
+    if [[ "${third_file}" ]]; then third2second ${sra_id}; fi
+    for fastq in ${OUTDIR}/tmp/*.fastq; do pigz -p ${NTHREADS} ${fastq}; done
+  fi
+}
+
+fastq_dump_sra(){
+  i=1
+  for file in ${INPUT_FILES}; do
+    local sra_id=$(basename ${file} .sra)
+    pfastq-dump -t ${NTHREADS} -O ${OUTDIR}/tmp/ --split-files --skip-technical --defline-qual '+' --defline-seq '@$sn[_$rn]/$ri' ${file}
+    compress ${sra_id}
+    let i++
+  done
+}
+
+fastq_dump_accession(){
+  i=1
+  cat ${ACCESSION} | while read line || [ -n "${line}" ]; do
+    local sra_id=${line}
+    pfastq-dump -t ${NTHREADS} -O {OUTDIR}/tmp --split-files --skip-technical --defline-qual '+' --defline-seq '@$sn[_$rn]/$ri' ${OUTDIR}/tmp/${sra_id}.sra
+    compress ${sra_id}
+    let i++
+  done
+}
+
+
+
+# cd ${OUTDIR}/tmp
+if [[ "${ACCESSION}" ]]; then
+  fastq_dump_accession
+else
+  fastq_dump_sra
+fi
+
+mv -bv ${OUTDIR}/tmp/*.fastq.gz ${OUTDIR}

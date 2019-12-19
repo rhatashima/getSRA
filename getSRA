@@ -1,11 +1,11 @@
 #!/bin/sh
 
 # getSRA version
-VERSION="0.2"
+VERSION="0.3"
 
 # default arguments
 OUTDIR="./"
-NTHREADS=16
+NTHREADS=8
 
 # functions for version and help
 print_version(){
@@ -15,10 +15,10 @@ print_version(){
 print_help(){
   cat <<EOS
 Usage:
-getSRA.sh -t <number of threads> -s <sra id> -n <sample name>
+getSRA -t <number of threads> -s <sra id> -n <sample name>
 
 pfastq-dump option:
--t|--threads         number of threads [default: 16]
+-t|--threads         number of threads [default: 8]
 -s|--sra-id          SRA id
 -a|--accession-list  Accession list
 -o|--outdir          output directory [default: cwd]
@@ -79,9 +79,6 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
-
-# if ! [[ "${NAME}" ]]; then echo "ERROR: No Sample Name"; exit 1; fi
-# if ! [[ "${SRAID}" ]]; then echo "ERROR: No SRA ID"; exit 1; fi
 
 if [[ ${OUTDIR} == */ ]]; then
   OUTDIR="${OUTDIR%*/}"
@@ -153,3 +150,4 @@ else
 fi
 
 mv -bv ${OUTDIR}/tmp/*.fastq.gz ${OUTDIR}
+rm -r ${OUTDIR}/tmp

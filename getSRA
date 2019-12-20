@@ -1,11 +1,11 @@
 #!/bin/sh
 
 # getSRA version
-VERSION="0.3"
+VERSION="0.4"
 
 # default arguments
 OUTDIR="./"
-NTHREADS=8
+NTHREADS=`grep -c ^processor /proc/cpuinfo`
 
 # functions for version and help
 print_version(){
@@ -18,7 +18,7 @@ Usage:
 getSRA -t <number of threads> -s <sra id> -n <sample name>
 
 pfastq-dump option:
--t|--threads         number of threads [default: 8]
+-t|--threads         number of threads [default: number of cores on your systerm]
 -s|--sra-id          SRA id
 -a|--accession-list  Accession list
 -o|--outdir          output directory [default: cwd]

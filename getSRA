@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # getSRA version
-VERSION="0.5"
+VERSION="0.6"
 
 # default arguments
 OUTDIR="./"
@@ -66,7 +66,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     -k|--keep)
-      KEEP=${2}
+      KEEP="${OPTIONS} ${1}"
       shift
       ;;
     -Z|--stdout)
@@ -91,7 +91,7 @@ else
   :
 fi
 
-mkdir -p ${OUTDIR}
+mkdir -p ${OUTDIR}/tmp
 
 if [[ "${SRAID}" ]]; then
   prefetch --output-directory ${OUTDIR}/tmp ${SRAID};
@@ -129,7 +129,7 @@ fastq_dump_sra(){
   idx=1
   for file in ${INPUT_FILES}; do
     local sra_id=$(basename ${file} .sra)
-    pfastq-dump -t ${NTHREADS} -O ${OUTDIR}/tmp/ --split-files --skip-technical --defline-qual '+' --defline-seq '@$sn[_$rn]/$ri' ${file}
+    pfastq-dump -t ${NTHREADS} -O ${OUTDIR}/tmp --split-files --skip-technical --defline-qual '+' --defline-seq '@$sn[_$rn]/$ri' ${file}
     compress ${sra_id} ${idx}
     let idx++
   done
@@ -139,7 +139,7 @@ fastq_dump_accession(){
   idx=1
   cat ${ACCESSION} | while read line || [ -n "${line}" ]; do
     local sra_id=${line}
-    pfastq-dump -t ${NTHREADS} -O {OUTDIR}/tmp --split-files --skip-technical --defline-qual '+' --defline-seq '@$sn[_$rn]/$ri' ${OUTDIR}/tmp/${sra_id}.sra
+    pfastq-dump -t ${NTHREADS} -O ${OUTDIR}/tmp --split-files --skip-technical --defline-qual '+' --defline-seq '@$sn[_$rn]/$ri' ${OUTDIR}/tmp/${sra_id}.sra
     compress ${sra_id} ${idx}
     let idx++
   done
@@ -161,6 +161,3 @@ if [[ "${KEEP}" ]]; then
 else
   rm -r ${OUTDIR}/tmp
 fi
-
-
-

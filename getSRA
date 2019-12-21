@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # getSRA version
-VERSION="0.4"
+VERSION="0.5"
 
 # default arguments
 OUTDIR="./"
@@ -17,12 +17,13 @@ print_help(){
 Usage:
 getSRA -t <number of threads> -s <sra id> -n <sample name>
 
-pfastq-dump option:
+getSRA option:
 -t|--threads         number of threads [default: number of cores on your systerm]
 -s|--sra-id          SRA id
 -a|--accession-list  Accession list
 -o|--outdir          output directory [default: cwd]
 -n|--name            sample name
+-k|--keep            keep sra file
 
 Extra arguments will be passed through
 
@@ -62,6 +63,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     -n|--name)
       NAME=${2}
+      shift
+      ;;
+    -k|--keep)
+      KEEP=${2}
       shift
       ;;
     -Z|--stdout)
@@ -150,4 +155,12 @@ else
 fi
 
 mv -bv ${OUTDIR}/tmp/*.fastq.gz ${OUTDIR}
-rm -r ${OUTDIR}/tmp
+
+if [[ "${KEEP}" ]]; then
+  mv -b ${OUTDIR}/tmp ${OUTDIR}/sra
+else
+  rm -r ${OUTDIR}/tmp
+fi
+
+
+

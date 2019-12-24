@@ -1,11 +1,12 @@
 #!/bin/sh
 
 # getSRA version
-VERSION="0.6"
+VERSION="0.7"
 
 # default arguments
 OUTDIR="./"
 NTHREADS=`grep -c ^processor /proc/cpuinfo`
+COMPRESSION_LEVEL=6
 
 # functions for version and help
 print_version(){
@@ -23,7 +24,8 @@ getSRA option:
 -a|--accession-list  Accession list
 -o|--outdir          output directory [default: cwd]
 -n|--name            sample name
--k|--keep            keep sra file
+-k|--keep            do not delete sra file
+-c|--compress-level  compression level (0 to 9, 9 is strong compression but much slower) [default:6]
 
 Extra arguments will be passed through
 
@@ -67,6 +69,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     -k|--keep)
       KEEP="${OPTIONS} ${1}"
+      shift
+      ;;
+    -c|--compress-level)
+      COMPRESSION_LEVEL=${2}
       shift
       ;;
     -Z|--stdout)
@@ -117,11 +123,11 @@ compress(){
   if [ -f ${OUTDIR}/tmp/${sra_id}_3.fastq ]; then third_file=${OUTDIR}/tmp/${sra_id}_3.fastq; fi
   if [[ "${NAME}" ]]; then
     if [[ "${third_file}" ]]; then third2second ${sra_id}; fi
-    pigz -p ${NTHREADS} -c ${OUTDIR}/tmp/${sra_id}_1.fastq > ${OUTDIR}/tmp/${NAME}-${idx}_1.fastq.gz; rm ${OUTDIR}/tmp/${sra_id}_1.fastq;
-    pigz -p ${NTHREADS} -c ${OUTDIR}/tmp/${sra_id}_2.fastq > ${OUTDIR}/tmp/${NAME}-${idx}_2.fastq.gz; rm ${OUTDIR}/tmp/${sra_id}_2.fastq;
+    pigz -p ${NTHREADS} -${COMPRESSION_LEVEL} -c ${OUTDIR}/tmp/${sra_id}_1.fastq > ${OUTDIR}/tmp/${NAME}-${idx}_1.fastq.gz; rm ${OUTDIR}/tmp/${sra_id}_1.fastq;
+    pigz -p ${NTHREADS} -${COMPRESSION_LEVEL} -c ${OUTDIR}/tmp/${sra_id}_2.fastq > ${OUTDIR}/tmp/${NAME}-${idx}_2.fastq.gz; rm ${OUTDIR}/tmp/${sra_id}_2.fastq;
   else
     if [[ "${third_file}" ]]; then third2second ${sra_id}; fi
-    for fastq in ${OUTDIR}/tmp/*.fastq; do pigz -p ${NTHREADS} ${fastq}; done
+    for fastq in ${OUTDIR}/tmp/*.fastq; do pigz -p ${NTHREADS} -${COMPRESSION_LEVEL} ${fastq}; done
   fi
 }
 

@@ -137,7 +137,7 @@ compress(){
   else
     if [[ "${third_file}" ]]; then third2second ${sra_id}; fi
     for fastq in ${OUTDIR}/tmp/*.fastq; do
-      if ${COMPRESSION_FORMAT}==gz; then
+      if [ ${COMPRESSION_FORMAT} = gz ]; then
         pigz -p ${NTHREADS} -${COMPRESSION_LEVEL} ${fastq};
       else
         pbzip2 -p ${NTHREADS} -${COMPRESSION_LEVEL} ${fastq};

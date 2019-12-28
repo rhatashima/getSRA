@@ -131,8 +131,8 @@ compress(){
       pigz -p ${NTHREADS} -${COMPRESSION_LEVEL} -c ${OUTDIR}/tmp/${sra_id}_1.fastq > ${OUTDIR}/tmp/${NAME}-${idx}_1.fastq.gz; rm ${OUTDIR}/tmp/${sra_id}_1.fastq;
       pigz -p ${NTHREADS} -${COMPRESSION_LEVEL} -c ${OUTDIR}/tmp/${sra_id}_2.fastq > ${OUTDIR}/tmp/${NAME}-${idx}_2.fastq.gz; rm ${OUTDIR}/tmp/${sra_id}_2.fastq;
     else
-      pbzip2 -p ${NTHREADS} -${COMPRESSION_LEVEL} -c ${OUTDIR}/tmp/${sra_id}_1.fastq > ${OUTDIR}/tmp/${NAME}-${idx}_1.fastq.bz2;
-      pbzip2 -p ${NTHREADS} -${COMPRESSION_LEVEL} -c ${OUTDIR}/tmp/${sra_id}_2.fastq > ${OUTDIR}/tmp/${NAME}-${idx}_2.fastq.bz2;
+      pbzip2 -p${NTHREADS} -${COMPRESSION_LEVEL} -c ${OUTDIR}/tmp/${sra_id}_1.fastq > ${OUTDIR}/tmp/${NAME}-${idx}_1.fastq.bz2; rm ${OUTDIR}/tmp/${sra_id}_1.fastq;
+      pbzip2 -p${NTHREADS} -${COMPRESSION_LEVEL} -c ${OUTDIR}/tmp/${sra_id}_2.fastq > ${OUTDIR}/tmp/${NAME}-${idx}_2.fastq.bz2; rm ${OUTDIR}/tmp/${sra_id}_2.fastq;
     fi
   else
     if [[ "${third_file}" ]]; then third2second ${sra_id}; fi
@@ -140,7 +140,7 @@ compress(){
       if [ ${COMPRESSION_FORMAT} = gz ]; then
         pigz -p ${NTHREADS} -${COMPRESSION_LEVEL} ${fastq};
       else
-        pbzip2 -p ${NTHREADS} -${COMPRESSION_LEVEL} ${fastq};
+        pbzip2 -p${NTHREADS} -${COMPRESSION_LEVEL} ${fastq};
       fi
     done
   fi
@@ -175,7 +175,7 @@ else
   fastq_dump_sra
 fi
 
-mv -bv ${OUTDIR}/tmp/*.fastq.gz ${OUTDIR}
+mv -bv ${OUTDIR}/tmp/*.fastq.${COMPRESSION_FORMAT} ${OUTDIR}
 
 if [[ "${KEEP}" ]]; then
   mv -b ${OUTDIR}/tmp ${OUTDIR}/sra
